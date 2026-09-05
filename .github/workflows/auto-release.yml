@@ -1,0 +1,76 @@
+name: Auto Release
+
+# main 으로 PR 이 머지되면, 변경된 모듈만 자동으로 릴리스(태그 생성 & push)한다.
+#
+# - 어떤 모듈을 올릴지: axion 의 monorepo 설정이 판단한다.
+#   변경이 없는 모듈은 "nothing to release" 로 스스로 건너뛴다.
+# - 얼마나 올릴지: PR 의 head 브랜치명으로 결정한다.
+#   feature/* -> minor, hotfix|bugfix|fix/* -> patch, breaking|major/* -> major
+#   (규칙은 루트 build.gradle.kts 의 branchIncrementers 에 정의)
+on:
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+# 두 PR 이 연속으로 머지될 때 태그 push 가 겹치지 않도록 직렬화한다.
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # 그냥 닫힌 PR 은 제외하고, 실제로 머지된 경우에만 실행한다.
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 머지 결과인 main 을, 태그 계산을 위해 전체 히스토리로 받는다.
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: 릴리스 전 버전 확인
+        run: |
+          echo "머지된 브랜치: ${{ github.event.pull_request.head.ref }}"
+          ./gradlew --no-parallel versions \
+            -Prelease.overriddenBranchName='${{ github.event.pull_request.head.ref }}'
+
+      - name: 빌드 & 테스트
+        run: ./gradlew build
+
+      - name: 변경된 모듈 릴리스
+        id: release
+        run: |
+          # 4개 프로젝트 모두에 release 를 걸어도, 변경 없는 모듈은 태그를 만들지 않는다.
+          # overriddenBranchName 이 없으면 현재 브랜치(main)로 판단해 항상 patch 가 된다.
+          ./gradlew --no-parallel release :a:release :b:release :c:release \
+            -Prelease.overriddenBranchName='${{ github.event.pull_request.head.ref }}' \
+            -Prelease.disableChecks \
+            -Prelease.pushTagsOnly \
+            -Prelease.customUsername=x-access-token \
+            -Prelease.customPassword=${{ secrets.GITHUB_TOKEN }}
+
+      - name: 결과 요약
+        if: always()
+        run: |
+          {
+            echo "### 자동 릴리스 결과"
+            echo ""
+            echo "- PR: #${{ github.event.pull_request.number }}"
+            echo "- 브랜치: \`${{ github.event.pull_request.head.ref }}\`"
+            echo ""
+            echo '```'
+            echo "released-version: ${{ steps.release.outputs.released-version }}"
+            ./gradlew -q --no-parallel versions
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
