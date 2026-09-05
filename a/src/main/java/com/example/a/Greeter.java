@@ -16,4 +16,8 @@ public class Greeter {
         }
         return greeting + ", " + name + "!";
     }
+
+    public String farewell(String name) {
+        return "Goodbye, " + name + "!";
+    }
 }

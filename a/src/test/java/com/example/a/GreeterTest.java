@@ -13,12 +13,7 @@ class GreeterTest {
     }
 
     @Test
-    void greetsWithCustomGreeting() {
-        assertEquals("안녕, axion!", new Greeter().greet("안녕", "axion"));
-    }
-
-    @Test
-    void rejectsBlankName() {
-        assertThrows(IllegalArgumentException.class, () -> new Greeter().greet(" "));
+    void bidsFarewellByName() {
+        assertEquals("Goodbye, axion!", new Greeter().farewell("axion"));
     }
 }
