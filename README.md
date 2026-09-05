@@ -162,22 +162,34 @@ Working on released version 0.1.1, nothing to release   # b
 Working on released version 0.1.1, nothing to release   # c
 ```
 
-**얼마나 올릴지** — PR 의 head 브랜치명으로 결정한다 (루트 `build.gradle.kts` 의 `branchIncrementers`).
+**얼마나 올릴지** — 직전 태그 이후 커밋 메시지로 결정한다
+(루트 `build.gradle.kts` 의 `conventionalIncrementer`).
 
-| 브랜치 패턴 | 증가 | `0.1.1` 기준 |
+| 커밋 메시지 | 증가 | `0.1.1` 기준 |
 |---|---|---|
-| `feature/*`, `feat/*` | minor | `0.2.0` |
-| `hotfix/*`, `bugfix/*`, `fix/*` | patch | `0.1.2` |
-| `breaking/*`, `major/*` | major | `1.0.0` |
-| 그 외 | patch (기본값) | `0.1.2` |
+| `feat!:`, `fix!:`, 본문에 `BREAKING CHANGE` | major | `1.0.0` |
+| `feat:` | minor | `0.2.0` |
+| 그 외 (`fix:`, `chore:`, `docs:` ...) | patch | `0.1.2` |
 
-> **`-Prelease.overriddenBranchName` 이 핵심이다.**
-> 머지가 끝난 시점의 현재 브랜치는 `main` 이라서, 그대로 두면 `branchVersionIncrementer` 가
-> 아무 패턴에도 안 걸려 항상 patch 가 된다. 워크플로에서 PR 의 head 브랜치명
-> (`github.event.pull_request.head.ref`)을 명시적으로 주입해야 규칙이 적용된다.
+모듈마다 기준 태그(`a-*`, `b-*`, `v*`)와 대상 경로가 다르므로, 각자 자기
+`monorepo` 범위에 해당하는 커밋만 훑는다. 여러 등급이 섞여 있으면 가장 큰 쪽이 이긴다.
 
-규칙을 바꾸려면 루트 `build.gradle.kts` 의 `branchIncrementers` 맵만 수정하면 된다.
-이 맵은 `subprojects` 블록에서 4개 모듈 전부에 전파된다.
+> **왜 브랜치명이 아니라 커밋 메시지인가.**
+> 브랜치명은 머지 후 사라지는 일회성 정보라 워크플로 실행에만 실려 전달된다.
+> 그래서 (1) 릴리스 잡이 늦게 시작하면 그 사이 머지된 다른 PR 의 커밋까지
+> 자기 브랜치명의 증가 폭으로 태그하고, (2) PR 이 연달아 머지되면 concurrency
+> 큐에서 중간 잡이 취소되면서 그 PR 의 증가 규칙이 통째로 증발한다.
+> major 가 patch 로 둔갑해도 버전 숫자만 봐서는 알 수 없다는 게 특히 나쁘다.
+>
+> 커밋 메시지는 main 에 영구히 남는다. 직전 태그 이후 커밋을 전부 훑어 판정하면
+> 잡이 언제 몇 번 돌든, 취소되든, 같은 답이 나온다.
+
+이 때문에 Auto Release 는 `pull_request: closed` 가 아니라 `push: branches: [main]`
+을 트리거로 쓴다. push 이벤트는 체크아웃 대상이 그 푸시의 커밋으로 고정되므로
+`ref: main` 처럼 "지금 최신"을 다시 조회하는 문제가 없다.
+
+수동으로 등급을 덮어써야 하면 `-Prelease.versionIncrementer=...` 가 여전히 우선한다.
+Release 워크플로(`workflow_dispatch`)가 이 경로를 쓴다.
 
 Release 워크플로 입력값:
 

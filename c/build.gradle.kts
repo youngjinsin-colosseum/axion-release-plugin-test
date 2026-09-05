@@ -16,8 +16,6 @@ scmVersion {
     // c/ 디렉터리의 변경만 c 버전을 증가시킨다. (a, b 의 변경에는 반응하지 않는다)
     monorepo {
     }
-
-    versionIncrementer("incrementPatch")
 }
 
 version = scmVersion.version
