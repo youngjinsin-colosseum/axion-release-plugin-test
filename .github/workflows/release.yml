@@ -64,7 +64,8 @@ jobs:
       - name: 릴리스 (태그 생성 & push)
         id: release
         run: |
-          ./gradlew ${{ steps.target.outputs.tasks }} \
+          # 태그 생성/push 가 같은 .git 을 건드리므로 순차 실행한다.
+          ./gradlew --no-parallel ${{ steps.target.outputs.tasks }} \
             -Prelease.versionIncrementer=${{ inputs.incrementer }} \
             ${{ inputs.forceVersion != '' && format('-Prelease.forceVersion={0}', inputs.forceVersion) || '' }} \
             -Prelease.disableChecks \

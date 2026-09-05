@@ -4,6 +4,10 @@ plugins {
 
 // 루트 프로젝트 버전: `v<version>` 태그를 기준으로 계산한다.
 scmVersion {
+    // CI 에서는 checkout 시 fetch-depth: 0 으로 전체 히스토리를 받으므로
+    // 플러그인의 unshallow fetch 는 불필요하다. (병렬 실행 시 .git/shallow lock 충돌 유발)
+    unshallowRepoOnCI.set(false)
+
     tag {
         prefix.set("v")
         versionSeparator.set("")

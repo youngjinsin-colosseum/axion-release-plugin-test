@@ -157,6 +157,10 @@ CI 관련 주의점:
 
 - `actions/checkout` 은 기본이 shallow clone 이라 태그를 못 본다 → **`fetch-depth: 0` 필수**
 - detached HEAD 상태이므로 `-Prelease.disableChecks -Prelease.pushTagsOnly` 를 붙인다
+- 플러그인은 CI에서 shallow 여부와 무관하게 `fetch --unshallow` 를 시도한다.
+  `fetch-depth: 0` 을 쓰고 있으므로 각 모듈에 `unshallowRepoOnCI.set(false)` 로 꺼둔다.
+  (켜둔 채 여러 모듈을 병렬 릴리스하면 `lock error: .git/shallow` 로 실패한다)
+- 릴리스는 `--no-parallel` 로 실행한다. 여러 모듈이 같은 `.git` 에 동시에 태그를 만들면 충돌한다
 - 태그 push 를 위해 `permissions: contents: write` 와 `GITHUB_TOKEN` 인증이 필요하다
 - `release` 태스크는 `released-version` 을 GitHub output 으로 내보낸다.
   모듈마다 버전이 다르면 JSON 형태다: `{"a":"0.2.0","b":"0.1.0"}`

@@ -6,6 +6,8 @@ plugins {
 
 // 모듈 c 는 `c-<version>` 태그로 독립 버전을 가진다.
 scmVersion {
+    unshallowRepoOnCI.set(false)
+
     tag {
         prefix.set("c")
         versionSeparator.set("-")
