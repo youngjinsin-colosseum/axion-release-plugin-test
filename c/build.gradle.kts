@@ -13,9 +13,8 @@ scmVersion {
         versionSeparator.set("-")
     }
 
+    // c/ 디렉터리의 변경만 c 버전을 증가시킨다. (a, b 의 변경에는 반응하지 않는다)
     monorepo {
-        // c 는 b(그리고 전이적으로 a)에 의존한다.
-        include(listOf("a", "b"))
     }
 
     versionIncrementer("incrementPatch")
