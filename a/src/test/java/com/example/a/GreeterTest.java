@@ -10,4 +10,9 @@ class GreeterTest {
     void greetsByName() {
         assertEquals("Hello, axion!", new Greeter().greet("axion"));
     }
+
+    @Test
+    void bidsFarewellByName() {
+        assertEquals("Goodbye, axion!", new Greeter().farewell("axion"));
+    }
 }
