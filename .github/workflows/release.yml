@@ -1,0 +1,83 @@
+name: Release
+
+# 릴리스할 모듈과 버전 증가 방식을 선택해서 수동으로 실행한다.
+# 실행 결과로 `<prefix><version>` 태그가 생성되어 origin 에 push 된다.
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 릴리스 대상
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - root
+          - a
+          - b
+          - c
+      incrementer:
+        description: 버전 증가 방식
+        type: choice
+        required: true
+        default: incrementPatch
+        options:
+          - incrementPatch
+          - incrementMinor
+          - incrementMajor
+      forceVersion:
+        description: 버전 강제 지정 (비우면 자동 계산)
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: 릴리스 태스크 결정
+        id: target
+        run: |
+          case "${{ inputs.module }}" in
+            all)  echo "tasks=release :a:release :b:release :c:release" >> "$GITHUB_OUTPUT" ;;
+            root) echo "tasks=release" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "tasks=:${{ inputs.module }}:release" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: 릴리스 전 검증
+        run: ./gradlew build
+
+      - name: 릴리스 (태그 생성 & push)
+        id: release
+        run: |
+          ./gradlew ${{ steps.target.outputs.tasks }} \
+            -Prelease.versionIncrementer=${{ inputs.incrementer }} \
+            ${{ inputs.forceVersion != '' && format('-Prelease.forceVersion={0}', inputs.forceVersion) || '' }} \
+            -Prelease.disableChecks \
+            -Prelease.pushTagsOnly \
+            -Prelease.customUsername=x-access-token \
+            -Prelease.customPassword=${{ secrets.GITHUB_TOKEN }}
+
+      - name: 릴리스된 버전 출력
+        run: |
+          {
+            echo "### 릴리스 결과"
+            echo '```'
+            echo "released-version: ${{ steps.release.outputs.released-version }}"
+            ./gradlew -q versions
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

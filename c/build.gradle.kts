@@ -1,5 +1,6 @@
 plugins {
     java
+    application
     id("pl.allegro.tech.build.axion-release")
 }
 
@@ -19,6 +20,10 @@ scmVersion {
 }
 
 version = scmVersion.version
+
+application {
+    mainClass.set("com.example.c.App")
+}
 
 dependencies {
     implementation(project(":b"))
