@@ -146,6 +146,38 @@ git tag --list 'a-*'
 |---------|-------|--------|
 | `.github/workflows/ci.yml` | `main` push / PR | 현재 버전 출력 + `./gradlew build` |
 | `.github/workflows/release.yml` | 수동 실행(`workflow_dispatch`) | 대상 모듈 선택 → 릴리스 태그 생성 & push |
+| `.github/workflows/auto-release.yml` | main 으로 PR 머지 | 변경된 모듈만 자동 릴리스 (브랜치명으로 범핑 폭 결정) |
+
+### 브랜치 기반 자동 릴리스
+
+main 으로 PR 이 머지되면 `auto-release.yml` 이 **변경된 모듈만** 자동으로 릴리스한다.
+
+**어떤 모듈을 올릴지** — 별도 diff 계산 없이 axion 의 monorepo 설정이 판단한다.
+4개 프로젝트 전부에 `release` 를 걸어도 변경 없는 모듈은 스스로 건너뛴다.
+
+```
+Creating tag: v0.2.0
+Working on released version 0.1.1, nothing to release   # a
+Working on released version 0.1.1, nothing to release   # b
+Working on released version 0.1.1, nothing to release   # c
+```
+
+**얼마나 올릴지** — PR 의 head 브랜치명으로 결정한다 (루트 `build.gradle.kts` 의 `branchIncrementers`).
+
+| 브랜치 패턴 | 증가 | `0.1.1` 기준 |
+|---|---|---|
+| `feature/*`, `feat/*` | minor | `0.2.0` |
+| `hotfix/*`, `bugfix/*`, `fix/*` | patch | `0.1.2` |
+| `breaking/*`, `major/*` | major | `1.0.0` |
+| 그 외 | patch (기본값) | `0.1.2` |
+
+> **`-Prelease.overriddenBranchName` 이 핵심이다.**
+> 머지가 끝난 시점의 현재 브랜치는 `main` 이라서, 그대로 두면 `branchVersionIncrementer` 가
+> 아무 패턴에도 안 걸려 항상 patch 가 된다. 워크플로에서 PR 의 head 브랜치명
+> (`github.event.pull_request.head.ref`)을 명시적으로 주입해야 규칙이 적용된다.
+
+규칙을 바꾸려면 루트 `build.gradle.kts` 의 `branchIncrementers` 맵만 수정하면 된다.
+이 맵은 `subprojects` 블록에서 4개 모듈 전부에 전파된다.
 
 Release 워크플로 입력값:
 
